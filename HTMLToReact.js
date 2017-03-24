@@ -2,10 +2,83 @@ const fs = require('fs');
 const path = require('path');
 
 const args = process.argv.slice(2)
-
+class modules {
+  constructor() {
+    this.HTMLPages = [];
+    this.dirtyHTMLPages = [];
+    this.Components = [];
+  }
+  findComponents(){
+    if(this.HTMLPages.length > 1){
+      //Find Similar Divs
+      for(let i=0; i < this.HTMLPages.length; i++){
+        let divIndex = 0;
+        while(this.HTMLPages[i].indexOf("<div", divIndex + "<div".length) != -1){
+          let divsFound = 1;
+          let firstOpenDiv = this.HTMLPages[i].indexOf("<div", divIndex + "<div".length);
+          let currentOpenDiv = firstOpenDiv;
+          let currentCloseDiv = firstOpenDiv;
+          while(divsFound != 0){
+            if((this.HTMLPages[i].indexOf("<div", currentOpenDiv + "<div".length) < this.HTMLPages[i].indexOf("</div>", currentCloseDiv + "</div>".length))
+             && this.HTMLPages[i].indexOf("<div", currentOpenDiv + "<div".length) != -1){
+              currentOpenDiv = this.HTMLPages[i].indexOf("<div", currentOpenDiv + "<div".length);
+              divsFound++;
+            }
+            else{
+              divsFound--;
+              if(divsFound != 0){
+                  currentCloseDiv = this.HTMLPages[i].indexOf("</div>", currentCloseDiv + "</div>".length);
+                }
+              }
+            }
+            let newCompCandidate = this.HTMLPages[i].substring(firstOpenDiv, currentCloseDiv + "</div>".length);
+            if(this.addComponent(newCompCandidate)){
+              divIndex = currentCloseDiv + "</div>".length;
+            }
+            else {
+              divIndex = firstOpenDiv + "<div".length;
+            }
+          }
+        }
+      }
+    }
+    // true = componet has already been added or was just added or that it had les that 15 tags AKA skip this section
+    // false means that it wasn't found
+    addComponent(newCompCandidate){
+      let toReturn = false;
+      if(newCompCandidate.split("<").length > 15){
+        this.Components.forEach((comp) => {
+          if(newCompCandidate.indexOf(comp) != -1 || comp.indexOf(newCompCandidate) != -1){
+            toReturn = true;
+          }
+        });
+        let foundOn = -1;
+        for(let currentPage=0; currentPage < this.HTMLPages.length; currentPage++){
+          if(this.HTMLPages[currentPage].indexOf(newCompCandidate) && currentPage != 1){
+            foundOn = currentPage;
+            break;
+          };
+        }
+        if(foundOn != -1){
+          this.Components.push(newCompCandidate);
+          toReturn = true;
+        }
+      }
+      return toReturn;
+    }
+  addHTMLPage(HTMLPage){
+    this.dirtyHTMLPages.push(HTMLPage);
+    HTMLPage = HTMLPage.replace(new RegExp(" ", "g"), "");
+    HTMLPage = HTMLPage.replace(new RegExp("\n", "g"), "");
+    HTMLPage = HTMLPage.replace(new RegExp("\r", "g"), "");
+    this.HTMLPages.push(HTMLPage);
+    this.findComponents();
+  }
+}
 let inputDir = args[0];
 let outputDir = args[1];
 let Links = [];
+const mods = new modules();
 let beginingIndexHead = `
 <!DOCTYPE html>
 <html lang="en"
@@ -29,15 +102,9 @@ ReactDOM.render(
     <Route path="/" component={Layout}>`;
 
 const copyFile = (source, target) => {
-  try{
-  let data = fs.readFileSync(source, 'utf-8');
-  fs.writeFileSync(target, data, 'utf-8');
-  }
-  catch(e){
-    if (!fs.existsSync(target)){
-      fs.mkdirSync(target);
-    }
-  }
+  let data = fs.createReadStream(source);
+  let newFile = fs.createWriteStream(target);
+  data.pipe(newFile);
 };
 const getAllFiles = (inputDirectory, outDir, OldDirectory = false) =>{
   const stepDown = (Dir) => {
@@ -189,7 +256,9 @@ const addHtmlToProject = (file) =>{
   <script src="client.min.js"></script>
   </body>
 </html>`, 'utf-8');
+mods.addHTMLPage(newValue);
 }
+
 
 
 getAllFiles(".\\imports", outputDir);
