@@ -111,9 +111,8 @@ class modules {
                                 filesList.forEach(file => {
                                     fs.readFile(outputDir + '\\src\\js\\pages\\' + file, 'utf8', (err, data) => {
                                         if (data.indexOf(this.dirtyHTMLPages[currentPage]) != -1) {
-                                            console.log(dirtyDiv);
                                             data = data.replace(dirtyDiv, "<" + componentName + " />");
-                                            data = `import ` + componentName + ` from "/src/js/components/layout/` + componentName + `.js";` + "\n" + data;
+                                            data = `import ` + componentName + ` from "../components/layout/` + componentName + `";` + "\n" + data;
                                             this.dirtyHTMLPages[currentPage] = data;
                                             this.HTMLPages[currentPage] = this.cleanHTML(data);
                                             fs.writeFileSync(outputDir + '\\src\\js\\pages\\' + file, data);
@@ -155,9 +154,6 @@ class modules {
               currentCloseDiv = HTMLPage.indexOf("</div>", currentCloseDiv + "</div>".length);
           }
       }
-      currentCloseDiv = HTMLPage.indexOf("</div>", currentCloseDiv + "</div>".length);
-      console.log("\n\n");
-      console.log(HTMLPage.substring(firstOpenDiv, currentCloseDiv + "</div>".length));
       return HTMLPage.substring(firstOpenDiv, currentCloseDiv + "</div>".length);
   }
 }
